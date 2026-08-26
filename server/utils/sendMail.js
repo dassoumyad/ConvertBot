@@ -1,24 +1,42 @@
-const { Resend } = require("resend");
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+const nodemailer = require("nodemailer");
 
 const sendMail = async (options) => {
   try {
-    const { data, error } = await resend.emails.send({
-      from: "ConvertBot <onboarding@resend.dev>",
-      to: [options.email],
-      subject: options.subject,
-      html: `<p>${options.message}</p>`,
-    });
-
-    if (error) {
-      console.error("Resend error:", error);
-      throw new Error(error.message);
+    // Check email credentials
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+      throw new Error("Email credentials not found");
     }
 
-    console.log("Email sent successfully:", data);
+    // Create Gmail transporter
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD,
+      },
+    });
+
+    // Email details
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+
+      to: options.email,
+
+      subject: options.subject,
+
+      text: options.message,
+
+      html: `<p><b>${options.message}</b></p>`,
+    };
+
+    // Send email
+    await transporter.sendMail(mailOptions);
+
+    console.log("Email sent successfully");
   } catch (error) {
-    console.error("Email error:", error.message);
+    console.log("Email error:", error.message);
+
     throw error;
   }
 };
