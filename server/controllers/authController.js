@@ -10,21 +10,30 @@ exports.register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
+    // ------------------------------------------
     // Check fields
+    // ------------------------------------------
+
     if (!name || !email || !password) {
       return res.status(400).json({
         message: "All fields are required",
       });
     }
 
+    // ------------------------------------------
     // Check password
+    // ------------------------------------------
+
     if (password.length < 6 || password.length > 20) {
       return res.status(400).json({
         message: "Password must be between 6 and 20 characters",
       });
     }
 
+    // ------------------------------------------
     // Check email
+    // ------------------------------------------
+
     const emailPattern =
       /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
@@ -34,7 +43,10 @@ exports.register = async (req, res) => {
       });
     }
 
+    // ------------------------------------------
     // Check existing user
+    // ------------------------------------------
+
     const existingUser = await User.findOne({ email });
 
     if (existingUser) {
@@ -43,17 +55,26 @@ exports.register = async (req, res) => {
       });
     }
 
+    // ------------------------------------------
     // Generate 6 digit OTP
+    // ------------------------------------------
+
     const otp = Math.floor(
       100000 + Math.random() * 900000
     ).toString();
 
-    // OTP expires in 15 minutes
+    // ------------------------------------------
+    // OTP expires after 15 minutes
+    // ------------------------------------------
+
     const otpExpiry = new Date(
       Date.now() + 15 * 60 * 1000
     );
 
+    // ------------------------------------------
     // Create user
+    // ------------------------------------------
+
     const user = await User.create({
       name,
       email,
@@ -63,16 +84,37 @@ exports.register = async (req, res) => {
       isVerified: false,
     });
 
-    // Send OTP email
+    // ------------------------------------------
+    // Send OTP
+    // ------------------------------------------
+
     await sendMail({
       email: user.email,
-      subject: "ConvertBot - Email Verification OTP",
-      message: `Your ConvertBot verification OTP is ${otp}. This OTP is valid for 15 minutes.`,
+
+      subject:
+        "ConvertBot - Email Verification OTP",
+
+      message:
+        `Your ConvertBot verification OTP is ${otp}. ` +
+        `This OTP is valid for 15 minutes.`,
+
+      otp: otp,
     });
 
-    return res.status(201).json({
-      message: "Registration successful. OTP sent to your email.",
-    });
+    // ------------------------------------------
+    // Response
+    // ------------------------------------------
+
+    const response = {
+      message: "Registration successful.",
+    };
+
+    // Only return OTP in demo mode
+    if (process.env.DEMO_MODE === "true") {
+      response.demoOTP = otp;
+    }
+
+    return res.status(201).json(response);
 
   } catch (error) {
     console.log("Register Error:", error);
@@ -83,7 +125,6 @@ exports.register = async (req, res) => {
   }
 };
 
-
 // ======================================================
 // VERIFY OTP
 // ======================================================
@@ -92,14 +133,20 @@ exports.verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
 
+    // ------------------------------------------
     // Check fields
+    // ------------------------------------------
+
     if (!email || !otp) {
       return res.status(400).json({
         message: "Email and OTP are required",
       });
     }
 
+    // ------------------------------------------
     // Find user
+    // ------------------------------------------
+
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -108,14 +155,20 @@ exports.verifyOtp = async (req, res) => {
       });
     }
 
+    // ------------------------------------------
     // Check OTP
+    // ------------------------------------------
+
     if (user.otp !== otp) {
       return res.status(400).json({
         message: "Invalid OTP",
       });
     }
 
+    // ------------------------------------------
     // Check OTP expiry
+    // ------------------------------------------
+
     if (
       !user.otpExpiry ||
       user.otpExpiry < new Date()
@@ -125,16 +178,22 @@ exports.verifyOtp = async (req, res) => {
       });
     }
 
-    // Mark user as verified
+    // ------------------------------------------
+    // Verify user
+    // ------------------------------------------
+
     user.isVerified = true;
 
-    // Remove OTP
+    // Remove OTP after successful verification
     user.otp = undefined;
     user.otpExpiry = undefined;
 
     await user.save();
 
+    // ------------------------------------------
     // Create JWT
+    // ------------------------------------------
+
     const token = jwt.sign(
       {
         id: user._id,
@@ -145,8 +204,10 @@ exports.verifyOtp = async (req, res) => {
       }
     );
 
-    // IMPORTANT:
-    // Return user information also
+    // ------------------------------------------
+    // Success response
+    // ------------------------------------------
+
     return res.status(200).json({
       message: "Email verified successfully",
 
@@ -168,7 +229,6 @@ exports.verifyOtp = async (req, res) => {
   }
 };
 
-
 // ======================================================
 // LOGIN
 // ======================================================
@@ -177,14 +237,20 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // ------------------------------------------
     // Check fields
+    // ------------------------------------------
+
     if (!email || !password) {
       return res.status(400).json({
         message: "Email and password are required",
       });
     }
 
+    // ------------------------------------------
     // Find user
+    // ------------------------------------------
+
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -193,14 +259,20 @@ exports.login = async (req, res) => {
       });
     }
 
+    // ------------------------------------------
     // Check verification
+    // ------------------------------------------
+
     if (!user.isVerified) {
       return res.status(401).json({
         message: "Please verify your email first",
       });
     }
 
+    // ------------------------------------------
     // Compare password
+    // ------------------------------------------
+
     const isPasswordCorrect =
       await user.comparePassword(password);
 
@@ -210,7 +282,10 @@ exports.login = async (req, res) => {
       });
     }
 
+    // ------------------------------------------
     // Create JWT
+    // ------------------------------------------
+
     const token = jwt.sign(
       {
         id: user._id,
@@ -221,7 +296,10 @@ exports.login = async (req, res) => {
       }
     );
 
-    // Return token + user
+    // ------------------------------------------
+    // Success
+    // ------------------------------------------
+
     return res.status(200).json({
       message: "Login successful",
 

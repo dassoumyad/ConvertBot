@@ -3,6 +3,28 @@ const nodemailer = require("nodemailer");
 const sendMail = async (options) => {
   try {
 
+    // ==========================================
+    // DEMO MODE
+    // ==========================================
+
+    if (process.env.DEMO_MODE === "true") {
+
+      console.log("=================================");
+      console.log("DEMO MODE ENABLED");
+      console.log("Email sending skipped");
+      console.log("OTP:", options.otp);
+      console.log("=================================");
+
+      return {
+        success: true,
+        demo: true,
+      };
+    }
+
+    // ==========================================
+    // REAL EMAIL - LOCAL DEVELOPMENT
+    // ==========================================
+
     if (
       !process.env.EMAIL_USER ||
       !process.env.EMAIL_PASSWORD
@@ -30,6 +52,11 @@ const sendMail = async (options) => {
     await transporter.sendMail(mailOptions);
 
     console.log("Email sent successfully");
+
+    return {
+      success: true,
+      demo: false,
+    };
 
   } catch (error) {
 

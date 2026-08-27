@@ -1,6 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Eye, EyeOff } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  ShieldCheck,
+  Copy,
+  Check
+} from "lucide-react";
 import api from "../utils/api";
 
 function Register() {
@@ -26,6 +32,17 @@ function Register() {
 
 
   // =========================
+  // OTP Modal State
+  // =========================
+
+  const [showOtpModal, setShowOtpModal] = useState(false);
+
+  const [demoOTP, setDemoOTP] = useState("");
+
+  const [copied, setCopied] = useState(false);
+
+
+  // =========================
   // Navigation
   // =========================
 
@@ -41,12 +58,15 @@ function Register() {
     e.preventDefault();
 
     setError("");
-    setLoading(true);
 
+    setLoading(true);
 
     try {
 
-      // Send registration data
+      // =========================================
+      // Send registration data to backend
+      // =========================================
+
       const response = await api.post(
         "/auth/register",
         {
@@ -57,25 +77,70 @@ function Register() {
       );
 
 
+      // =========================================
+      // Check backend response
+      // =========================================
+
       console.log(
         "REGISTER RESPONSE:",
         response.data
       );
 
 
-      // Save email temporarily
-      // OTP page will use this email
+      // =========================================
+      // Save email
+      // =========================================
+
       localStorage.setItem(
         "registerEmail",
         email
       );
 
 
-      // Redirect to OTP page
-      navigate("/verify-otp");
+      // =========================================
+      // Demo OTP
+      // =========================================
+
+      if (response.data.demoOTP) {
+
+        const otp = response.data.demoOTP;
+
+        console.log(
+          "DEMO OTP:",
+          otp
+        );
+
+
+        // Save OTP temporarily
+        localStorage.setItem(
+          "demoOTP",
+          otp
+        );
+
+
+        // Store OTP in state
+        setDemoOTP(otp);
+
+
+        // Open OTP modal
+        setShowOtpModal(true);
+
+      } else {
+
+        // =========================================
+        // Real email mode
+        // =========================================
+
+        navigate("/verify-otp");
+
+      }
 
 
     } catch (error) {
+
+      // =========================================
+      // Error Debugging
+      // =========================================
 
       console.log(
         "FULL ERROR:",
@@ -103,6 +168,10 @@ function Register() {
       );
 
 
+      // =========================================
+      // Display Error
+      // =========================================
+
       setError(
         error.response?.data?.message ||
         "Registration failed"
@@ -118,9 +187,61 @@ function Register() {
   };
 
 
+  // =========================
+  // Copy OTP
+  // =========================
+
+  const handleCopyOTP = async () => {
+
+    try {
+
+      await navigator.clipboard.writeText(
+        demoOTP
+      );
+
+
+      setCopied(true);
+
+
+      setTimeout(() => {
+
+        setCopied(false);
+
+      }, 2000);
+
+
+    } catch (error) {
+
+      console.log(
+        "Copy failed:",
+        error
+      );
+
+    }
+
+  };
+
+
+  // =========================
+  // Continue to OTP Page
+  // =========================
+
+  const handleContinue = () => {
+
+    setShowOtpModal(false);
+
+    navigate("/verify-otp");
+
+  };
+
+
   return (
 
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+
+      {/* ======================================= */}
+      {/* Register Card */}
+      {/* ======================================= */}
 
       <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-md">
 
@@ -158,7 +279,7 @@ function Register() {
 
 
         {/* ========================= */}
-        {/* Form */}
+        {/* Registration Form */}
         {/* ========================= */}
 
         <form onSubmit={handleRegister}>
@@ -177,12 +298,15 @@ function Register() {
               Name
             </label>
 
+
             <input
               id="name"
               type="text"
               placeholder="Enter your name"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) =>
+                setName(e.target.value)
+              }
               required
               className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none transition focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
@@ -203,12 +327,15 @@ function Register() {
               Email
             </label>
 
+
             <input
               id="email"
               type="email"
               placeholder="Enter your email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) =>
+                setEmail(e.target.value)
+              }
               required
               className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none transition focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
@@ -318,7 +445,9 @@ function Register() {
 
           <button
             type="button"
-            onClick={() => navigate("/login")}
+            onClick={() =>
+              navigate("/login")
+            }
             className="text-blue-600 hover:text-blue-700 font-semibold ml-1"
           >
 
@@ -328,8 +457,176 @@ function Register() {
 
         </p>
 
-
       </div>
+
+
+      {/* ======================================= */}
+      {/* OTP MODAL */}
+      {/* ======================================= */}
+
+      {showOtpModal && (
+
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+
+
+          {/* ================================= */}
+          {/* Modal Card */}
+          {/* ================================= */}
+
+          <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl p-6">
+
+
+            {/* ========================= */}
+            {/* Header */}
+            {/* ========================= */}
+
+            <div className="text-center">
+
+
+              {/* Icon */}
+
+              <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+
+                <ShieldCheck
+                  size={26}
+                  className="text-blue-600"
+                />
+
+              </div>
+
+
+              {/* Title */}
+
+              <h2 className="text-xl font-semibold text-gray-900 mt-4">
+
+                Verify your email
+
+              </h2>
+
+
+              {/* Description */}
+
+              <p className="text-sm text-gray-500 mt-2">
+
+                We've generated a verification code for
+
+              </p>
+
+
+              {/* Email */}
+
+              <p className="text-sm font-medium text-gray-700 mt-1 break-all">
+
+                {email}
+
+              </p>
+
+            </div>
+
+
+            {/* ========================= */}
+            {/* OTP Section */}
+            {/* ========================= */}
+
+            <div className="mt-6">
+
+
+              <p className="text-xs font-medium text-gray-500 mb-2">
+
+                VERIFICATION CODE
+
+              </p>
+
+
+              <div className="flex items-center gap-2">
+
+
+                {/* OTP */}
+
+                <div className="flex-1 bg-gray-50 border border-gray-200 rounded-lg py-3 text-center overflow-hidden">
+
+                  <span className="text-2xl font-semibold tracking-[0.25em] text-gray-900">
+
+                    {demoOTP}
+
+                  </span>
+
+                </div>
+
+
+                {/* Copy Button */}
+
+                <button
+                  type="button"
+                  onClick={handleCopyOTP}
+                  className="h-12 w-12 border border-gray-200 rounded-lg flex items-center justify-center hover:bg-gray-50 transition"
+                  title="Copy OTP"
+                >
+
+                  {copied ? (
+
+                    <Check
+                      size={19}
+                      className="text-green-600"
+                    />
+
+                  ) : (
+
+                    <Copy
+                      size={19}
+                      className="text-gray-500"
+                    />
+
+                  )}
+
+                </button>
+
+              </div>
+
+            </div>
+
+
+            {/* ========================= */}
+            {/* Expiry */}
+            {/* ========================= */}
+
+            <p className="text-xs text-gray-500 text-center mt-4">
+
+              This code is valid for 15 minutes.
+
+            </p>
+
+
+            {/* ========================= */}
+            {/* Continue Button */}
+            {/* ========================= */}
+
+            <button
+              type="button"
+              onClick={handleContinue}
+              className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition"
+            >
+
+              Continue
+
+            </button>
+
+
+            {/* ========================= */}
+            {/* Demo Notice */}
+            {/* ========================= */}
+
+            <p className="text-xs text-gray-400 text-center mt-4">
+
+              Demo verification code
+
+            </p>
+
+          </div>
+
+        </div>
+
+      )}
 
     </div>
 
